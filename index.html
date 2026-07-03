@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>夜店のくじ引き</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Kaisei+Decol:wght@400;700&family=Zen+Kaku+Gothic+New:wght@400;500;700;900&display=swap');
+
+:root{
+  --bg-deep:#0d1330;
+  --bg-mid:#1b2450;
+  --paper:#f6ecd8;
+  --paper-shadow:#e2d3ae;
+  --gold:#d8a53a;
+  --gold-bright:#ffd569;
+  --vermilion:#e2472b;
+  --hazure-gray:#6c7486;
+  --ink:#2a2416;
+  --p1:#e6495a;
+  --p2:#3e8bff;
+  --p3:#2fbf71;
+  --p4:#f2a53c;
+}
+
+*{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none;}
+html,body{height:100%;}
+body{
+  margin:0;
+  font-family:'Zen Kaku Gothic New', sans-serif;
+  background:
+    radial-gradient(circle at 50% -10%, #2a3670 0%, transparent 55%),
+    linear-gradient(180deg, var(--bg-deep) 0%, var(--bg-mid) 100%);
+  color:#f2ecd8;
+  min-height:100vh;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow-x:hidden;
+}
+#app{
+  width:100%;
+  max-width:420px;
+  min-height:100vh;
+  padding:18px 16px 28px;
+  display:flex;
+  flex-direction:column;
+  position:relative;
+}
+
+/* subtle lantern glow decorations */
+#app::before, #app::after{
+  content:"";
+  position:fixed;
+  width:220px; height:220px;
+  border-radius:50%;
+  filter:blur(70px);
+  opacity:0.35;
+  pointer-events:none;
+  z-index:0;
+}
+#app::before{ background:var(--gold); top:-60px; left:-60px; }
+#app::after{ background:var(--p2); bottom:-60px; right:-60px; opacity:0.2;}
+
+.screen{ position:relative; z-index:1; display:none; flex-direction:column; flex:1; animation:fadeIn .35s ease; }
+.screen.active{ display:flex; }
+@keyframes fadeIn{ from{opacity:0; transform:translateY(6px);} to{opacity:1; transform:translateY(0);} }
+
+/* ---------- Header ---------- */
+h1.title{
+  font-family:'Kaisei Decol', serif;
+  font-size:26px;
+  text-align:center;
+  margin:6px 0 2px;
+  color:var(--gold-bright);
+  letter-spacing:.06em;
+  text-shadow:0 2px 10px rgba(216,165,58,.4);
+}
+p.subtitle{
+  text-align:center;
+  font-size:12px;
+  color:#b9b6d8;
+  margin:0 0 22px;
+  letter-spacing:.15em;
+}
+
+/* ---------- Setup screen ---------- */
+.setup-card{
+  background:linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+  border:1px solid rgba(216,165,58,.25);
+  border-radius:18px;
+  padding:18px 16px;
+  margin-bottom:14px;
+}
+.stepper-row{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  padding:12px 2px;
+}
+.stepper-row + .stepper-row{ border-top:1px solid rgba(255,255,255,.08); }
+.stepper-label{
+  font-size:14px;
+  font-weight:700;
+  color:#f2ecd8;
+}
+.stepper-label small{
+  display:block;
+  font-weight:400;
+  font-size:10.5px;
+  color:#9d9ac0;
+  margin-top:2px;
+}
+.stepper{
+  display:flex;
+  align-items:center;
+  gap:12px;
+}
+.stepper button{
+  width:36px; height:36px;
+  border-radius:50%;
+  border:none;
+  background:var(--gold);
+  color:#2a1e05;
+  font-size:20px;
+  font-weight:900;
+  line-height:1;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 3px 0 #9c6f18;
+  transition:transform .08s;
+}
+.stepper button:active{ transform:translateY(2px); box-shadow:0 1px 0 #9c6f18; }
+.stepper button:disabled{ opacity:.35; box-shadow:none; }
+.stepper-value{
+  min-width:28px;
+  text-align:center;
+  font-size:20px;
+  font-weight:900;
+  font-family:'Kaisei Decol', serif;
+  color:var(--gold-bright);
+}
+
+.start-btn{
+  margin-top:6px;
+  width:100%;
+  padding:16px;
+  border:none;
+  border-radius:14px;
+  background:linear-gradient(180deg, var(--vermilion), #b5301a);
+  color:#fff8ea;
+  font-family:'Kaisei Decol', serif;
+  font-size:19px;
+  font-weight:700;
+  letter-spacing:.1em;
+  box-shadow:0 5px 0 #7d2010, 0 8px 18px rgba(226,71,43,.35);
+}
+.start-btn:active{ transform:translateY(3px); box-shadow:0 2px 0 #7d2010; }
+
+.setup-note{
+  text-align:center;
+  font-size:11px;
+  color:#8e8bb5;
+  margin-top:10px;
+  line-height:1.6;
+}
+
+/* ---------- Game screen ---------- */
+.turn-banner{
+  border-radius:16px;
+  padding:12px 14px;
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-bottom:14px;
+  transition:background .25s;
+  box-shadow:0 6px 16px rgba(0,0,0,.25);
+}
+.turn-badge{
+  width:46px; height:46px;
+  border-radius:50%;
+  background:#fff;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Kaisei Decol', serif;
+  font-size:22px;
+  font-weight:900;
+  flex-shrink:0;
+  box-shadow:inset 0 0 0 3px rgba(255,255,255,.5);
+}
+.turn-text{ font-family:'Kaisei Decol', serif; }
+.turn-text .big{ font-size:17px; font-weight:700; display:block; }
+.turn-text .small{ font-size:11px; opacity:.85; letter-spacing:.1em; }
+
+.progress-row{
+  display:flex;
+  justify-content:center;
+  gap:6px;
+  margin-bottom:14px;
+  font-size:11px;
+  color:#b9b6d8;
+}
+.progress-row span{
+  background:rgba(255,255,255,.07);
+  border-radius:20px;
+  padding:4px 10px;
+}
+.progress-row span b{ color:var(--gold-bright); }
+
+.grid{
+  display:grid;
+  grid-template-columns:repeat(3, 1fr);
+  gap:9px;
+  perspective:900px;
+}
+.card{
+  position:relative;
+  aspect-ratio:3/4;
+  cursor:pointer;
+}
+.card-inner{
+  position:relative;
+  width:100%; height:100%;
+  transform-style:preserve-3d;
+  transition:transform .45s cubic-bezier(.34,1.56,.64,1);
+}
+.card.revealed .card-inner{ transform:rotateY(180deg); }
+.card-face{
+  position:absolute; inset:0;
+  border-radius:10px;
+  backface-visibility:hidden;
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+}
+.card-front{
+  background:
+    repeating-linear-gradient(135deg, rgba(255,255,255,.06) 0 2px, transparent 2px 10px),
+    linear-gradient(160deg, var(--paper), var(--paper-shadow));
+  box-shadow:0 4px 10px rgba(0,0,0,.3), inset 0 0 0 2px rgba(216,165,58,.5);
+}
+.card-front::after{
+  content:"福";
+  font-family:'Kaisei Decol', serif;
+  font-size:22px;
+  color:rgba(150,40,20,.35);
+}
+.card-back{ transform:rotateY(180deg); box-shadow:0 4px 10px rgba(0,0,0,.35);}
+.card-back.atari{ background:linear-gradient(160deg,#ffdf8a,#e2472b); }
+.card-back.hazure{ background:linear-gradient(160deg,#8b93a8,#565f74); }
+.card-back.blank{ background:linear-gradient(160deg,#3a4270,#232a52); }
+
+.result-word{
+  font-family:'Kaisei Decol', serif;
+  font-weight:700;
+  font-size:15px;
+  color:#fff;
+  text-shadow:0 1px 3px rgba(0,0,0,.4);
+}
+.card-back.atari .result-word{ color:#5c1200; text-shadow:none;}
+.by-badge{
+  position:absolute;
+  top:4px; left:4px;
+  width:18px; height:18px;
+  border-radius:50%;
+  font-size:10px;
+  font-weight:900;
+  color:#fff;
+  display:flex; align-items:center; justify-content:center;
+  box-shadow:0 0 0 2px rgba(255,255,255,.6);
+}
+
+/* ---------- Flash effect overlay ---------- */
+#flash{
+  position:fixed; inset:0;
+  display:none;
+  align-items:center; justify-content:center;
+  z-index:50;
+  pointer-events:none;
+}
+#flash.show{ display:flex; }
+.flash-text{
+  font-family:'Kaisei Decol', serif;
+  font-size:56px;
+  font-weight:900;
+  padding:10px 30px;
+  border-radius:14px;
+}
+.flash-text.atari{
+  color:#fff3d0;
+  background:radial-gradient(circle, #e2472b 0%, #b5301a 70%);
+  animation:pop .7s cubic-bezier(.34,1.7,.64,1);
+  text-shadow:0 0 20px rgba(255,213,105,.8);
+  box-shadow:0 0 60px rgba(226,71,43,.7);
+}
+.flash-text.hazure{
+  color:#e7e9f2;
+  background:rgba(50,56,80,.9);
+  animation:shake .5s ease;
+}
+.flash-text.blank{
+  font-size:28px;
+  color:#c9c6e6;
+  background:rgba(40,46,80,.85);
+  animation:fadeQuick .5s ease;
+}
+@keyframes pop{
+  0%{ transform:scale(.3) rotate(-8deg); opacity:0;}
+  55%{ transform:scale(1.15) rotate(2deg); opacity:1;}
+  75%{ transform:scale(.95) rotate(-1deg);}
+  100%{ transform:scale(1) rotate(0);}
+}
+@keyframes shake{
+  0%,100%{ transform:translateX(0); opacity:1;}
+  20%{ transform:translateX(-10px);}
+  40%{ transform:translateX(10px);}
+  60%{ transform:translateX(-6px);}
+  80%{ transform:translateX(6px);}
+}
+@keyframes fadeQuick{ from{opacity:0; transform:scale(.85);} to{opacity:1; transform:scale(1);} }
+
+.confetti{
+  position:absolute;
+  width:8px; height:14px;
+  top:-20px;
+  border-radius:2px;
+  animation:fall linear forwards;
+}
+@keyframes fall{
+  to{ transform:translateY(110vh) rotate(360deg); opacity:0.2; }
+}
+
+/* ---------- Result screen ---------- */
+.result-title{
+  font-family:'Kaisei Decol', serif;
+  font-size:24px;
+  text-align:center;
+  color:var(--gold-bright);
+  margin:10px 0 18px;
+}
+.result-list{ display:flex; flex-direction:column; gap:10px; margin-bottom:20px; }
+.result-item{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  background:rgba(255,255,255,.05);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+  padding:12px 14px;
+  position:relative;
+}
+.result-item.winner{
+  border-color:var(--gold);
+  background:linear-gradient(90deg, rgba(216,165,58,.18), rgba(255,255,255,.04));
+}
+.result-avatar{
+  width:38px; height:38px;
+  border-radius:50%;
+  display:flex; align-items:center; justify-content:center;
+  font-family:'Kaisei Decol', serif;
+  font-weight:900;
+  color:#fff;
+  flex-shrink:0;
+}
+.result-name{ font-weight:700; font-size:14px; flex:1; }
+.result-stats{ display:flex; gap:8px; font-size:12px; }
+.stat-pill{
+  padding:4px 9px;
+  border-radius:20px;
+  font-weight:700;
+}
+.stat-pill.atari{ background:rgba(226,71,43,.25); color:#ffb18f; }
+.stat-pill.hazure{ background:rgba(108,116,134,.3); color:#c7cadb; }
+.crown{ position:absolute; top:-10px; left:-6px; font-size:18px; }
+
+.replay-btn{
+  width:100%;
+  padding:16px;
+  border:none;
+  border-radius:14px;
+  background:linear-gradient(180deg, var(--gold), #b3821f);
+  color:#2a1e05;
+  font-family:'Kaisei Decol', serif;
+  font-size:18px;
+  font-weight:700;
+  letter-spacing:.08em;
+  box-shadow:0 5px 0 #7c5c14;
+}
+.replay-btn:active{ transform:translateY(3px); box-shadow:0 2px 0 #7c5c14; }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- ===== Setup Screen ===== -->
+  <section class="screen active" id="screen-setup">
+    <h1 class="title">夜店のくじ引き</h1>
+    <p class="subtitle">YOMISE KUJI-BIKI</p>
+
+    <div class="setup-card">
+      <div class="stepper-row">
+        <div class="stepper-label">プレイ人数<small>2〜4人</small></div>
+        <div class="stepper">
+          <button id="players-minus">−</button>
+          <div class="stepper-value" id="players-value">2</div>
+          <button id="players-plus">＋</button>
+        </div>
+      </div>
+      <div class="stepper-row">
+        <div class="stepper-label">ハズレの数<small>0〜3個</small></div>
+        <div class="stepper">
+          <button id="hazure-minus">−</button>
+          <div class="stepper-value" id="hazure-value">1</div>
+          <button id="hazure-plus">＋</button>
+        </div>
+      </div>
+      <div class="stepper-row">
+        <div class="stepper-label">アタリの数<small>0〜3個</small></div>
+        <div class="stepper">
+          <button id="atari-minus">−</button>
+          <div class="stepper-value" id="atari-value">0</div>
+          <button id="atari-plus">＋</button>
+        </div>
+      </div>
+    </div>
+
+    <button class="start-btn" id="start-btn">はじめる</button>
+    <p class="setup-note">盤面は5×3の15マス。順番にタップして、<br>アタリとハズレが全部出たら終了だよ。</p>
+  </section>
+
+  <!-- ===== Game Screen ===== -->
+  <section class="screen" id="screen-game">
+    <div class="turn-banner" id="turn-banner">
+      <div class="turn-badge" id="turn-badge">1</div>
+      <div class="turn-text">
+        <span class="big" id="turn-name">1番さんの番</span>
+        <span class="small">マスをタップしてね</span>
+      </div>
+    </div>
+    <div class="progress-row">
+      <span>アタリ残り <b id="atari-left">0</b></span>
+      <span>ハズレ残り <b id="hazure-left">0</b></span>
+    </div>
+    <div class="grid" id="grid"></div>
+  </section>
+
+  <!-- ===== Result Screen ===== -->
+  <section class="screen" id="screen-result">
+    <h2 class="result-title">結果発表</h2>
+    <div class="result-list" id="result-list"></div>
+    <button class="replay-btn" id="replay-btn">もう一度あそぶ</button>
+  </section>
+
+</div>
+
+<div id="flash"><div class="flash-text" id="flash-text"></div></div>
+
+<script>
+(function(){
+  const PLAYER_COLORS = ['var(--p1)','var(--p2)','var(--p3)','var(--p4)'];
+  const PLAYER_COLORS_HEX = ['#e6495a','#3e8bff','#2fbf71','#f2a53c'];
+
+  let state = {
+    players: 2,
+    hazure: 1,
+    atari: 1
+  };
+
+  // ---- Setup screen wiring ----
+  function bindStepper(idPrefix, min, max, key){
+    const valueEl = document.getElementById(idPrefix+'-value');
+    const minusBtn = document.getElementById(idPrefix+'-minus');
+    const plusBtn = document.getElementById(idPrefix+'-plus');
+    function render(){
+      valueEl.textContent = state[key];
+      minusBtn.disabled = state[key] <= min;
+      plusBtn.disabled = state[key] >= max;
+    }
+    minusBtn.addEventListener('click', ()=>{ if(state[key]>min){ state[key]--; render(); }});
+    plusBtn.addEventListener('click', ()=>{ if(state[key]<max){ state[key]++; render(); }});
+    render();
+  }
+  bindStepper('players',2,4,'players');
+  bindStepper('hazure',0,3,'hazure');
+  bindStepper('atari',0,3,'atari');
+
+  document.getElementById('start-btn').addEventListener('click', startGame);
+  document.getElementById('replay-btn').addEventListener('click', ()=>{
+    showScreen('screen-setup');
+  });
+
+  function showScreen(id){
+    document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+    document.getElementById(id).classList.add('active');
+  }
+
+  // ---- Game state ----
+  let game = null;
+
+  function shuffle(arr){
+    for(let i=arr.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [arr[i],arr[j]] = [arr[j],arr[i]];
+    }
+    return arr;
+  }
+
+  function startGame(){
+    const total = 15;
+    let cells = [];
+    for(let i=0;i<state.atari;i++) cells.push('atari');
+    for(let i=0;i<state.hazure;i++) cells.push('hazure');
+    while(cells.length < total) cells.push('blank');
+    shuffle(cells);
+
+    game = {
+      cells: cells,
+      revealed: new Array(total).fill(false),
+      revealedBy: new Array(total).fill(null),
+      current: 0,
+      stats: Array.from({length:state.players}, ()=>({atari:0, hazure:0})),
+      remainingSpecial: state.atari + state.hazure,
+      revealedSpecial: 0,
+      locked: false
+    };
+
+    renderGrid();
+    updateTurnBanner();
+    updateProgress();
+    showScreen('screen-game');
+
+    if(game.remainingSpecial === 0){
+      setTimeout(finishGame, 400);
+    }
+  }
+
+  function renderGrid(){
+    const grid = document.getElementById('grid');
+    grid.innerHTML = '';
+    game.cells.forEach((type, idx)=>{
+      const card = document.createElement('div');
+      card.className = 'card';
+      card.dataset.idx = idx;
+      card.innerHTML = `
+        <div class="card-inner">
+          <div class="card-face card-front"></div>
+          <div class="card-face card-back"></div>
+        </div>`;
+      card.addEventListener('click', ()=> onTap(idx, card));
+      grid.appendChild(card);
+    });
+  }
+
+  function updateTurnBanner(){
+    const idx = game.current;
+    const banner = document.getElementById('turn-banner');
+    const badge = document.getElementById('turn-badge');
+    const name = document.getElementById('turn-name');
+    const color = PLAYER_COLORS_HEX[idx];
+    banner.style.background = `linear-gradient(90deg, ${color}33, transparent)`;
+    banner.style.boxShadow = `0 0 0 2px ${color}55, 0 6px 16px rgba(0,0,0,.25)`;
+    badge.style.color = color;
+    badge.textContent = (idx+1);
+    name.textContent = (idx+1) + '番さんの番';
+    name.style.color = color;
+  }
+
+  function updateProgress(){
+    document.getElementById('atari-left').textContent = state.atari - countRevealedOfType('atari');
+    document.getElementById('hazure-left').textContent = state.hazure - countRevealedOfType('hazure');
+  }
+  function countRevealedOfType(type){
+    let c=0;
+    game.cells.forEach((t,i)=>{ if(t===type && game.revealed[i]) c++; });
+    return c;
+  }
+
+  function onTap(idx, card){
+    if(game.locked || game.revealed[idx]) return;
+    game.locked = true;
+
+    const type = game.cells[idx];
+    game.revealed[idx] = true;
+    game.revealedBy[idx] = game.current;
+    card.classList.add('revealed');
+
+    const back = card.querySelector('.card-back');
+    back.classList.add(type);
+    const label = type==='atari' ? 'アタリ' : (type==='hazure' ? 'ハズレ' : '空');
+    back.innerHTML = `<div class="result-word">${label}</div>`;
+    const badge = document.createElement('div');
+    badge.className = 'by-badge';
+    badge.style.background = PLAYER_COLORS_HEX[game.current];
+    badge.textContent = game.current+1;
+    card.appendChild(badge);
+
+    if(type==='atari'){ game.stats[game.current].atari++; game.revealedSpecial++; }
+    else if(type==='hazure'){ game.stats[game.current].hazure++; game.revealedSpecial++; }
+
+    setTimeout(()=>{
+      showFlash(type);
+    }, 260);
+  }
+
+  function showFlash(type){
+    const flash = document.getElementById('flash');
+    const text = document.getElementById('flash-text');
+    text.className = 'flash-text ' + type;
+    text.textContent = type==='atari' ? '大当たり!' : (type==='hazure' ? 'ハズレ…' : 'カラ');
+    flash.classList.add('show');
+
+    let confettiEls = [];
+    if(type==='atari'){
+      for(let i=0;i<18;i++){
+        const c = document.createElement('div');
+        c.className = 'confetti';
+        c.style.left = Math.random()*100 + 'vw';
+        c.style.background = ['#ffd569','#e2472b','#fff3d0','#f2a53c'][i%4];
+        c.style.animationDuration = (0.8 + Math.random()*0.6) + 's';
+        flash.appendChild(c);
+        confettiEls.push(c);
+      }
+    }
+
+    const duration = type==='blank' ? 550 : 900;
+    setTimeout(()=>{
+      flash.classList.remove('show');
+      confettiEls.forEach(c=>c.remove());
+      updateProgress();
+      afterReveal();
+    }, duration);
+  }
+
+  function afterReveal(){
+    game.locked = false;
+    if(game.revealedSpecial >= game.remainingSpecial){
+      setTimeout(finishGame, 300);
+      return;
+    }
+    game.current = (game.current + 1) % state.players;
+    updateTurnBanner();
+  }
+
+  function finishGame(){
+    renderResult();
+    showScreen('screen-result');
+  }
+
+  function renderResult(){
+    const list = document.getElementById('result-list');
+    list.innerHTML = '';
+    const maxAtari = Math.max(...game.stats.map(s=>s.atari));
+    game.stats.forEach((s, idx)=>{
+      const item = document.createElement('div');
+      item.className = 'result-item' + ((maxAtari>0 && s.atari===maxAtari) ? ' winner' : '');
+      item.innerHTML = `
+        ${(maxAtari>0 && s.atari===maxAtari) ? '<div class="crown">👑</div>' : ''}
+        <div class="result-avatar" style="background:${PLAYER_COLORS_HEX[idx]}">${idx+1}</div>
+        <div class="result-name">${idx+1}番さん</div>
+        <div class="result-stats">
+          <span class="stat-pill atari">アタリ ${s.atari}</span>
+          <span class="stat-pill hazure">ハズレ ${s.hazure}</span>
+        </div>
+      `;
+      list.appendChild(item);
+    });
+    if(state.atari===0 && state.hazure===0){
+      const note = document.createElement('p');
+      note.style.cssText = 'text-align:center;font-size:12px;color:#9d9ac0;';
+      note.textContent = 'アタリもハズレも0個の設定だったよ。';
+      list.appendChild(note);
+    }
+  }
+})();
+</script>
+</body>
+</html>
