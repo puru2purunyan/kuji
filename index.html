@@ -326,6 +326,34 @@ p.subtitle{
   to{ transform:translateY(110vh) rotate(360deg); opacity:0.2; }
 }
 
+/* ---------- Hazure special effect ---------- */
+.impact-ring{
+  position:fixed;
+  top:50%; left:50%;
+  width:10px; height:10px;
+  border-radius:50%;
+  border:4px solid rgba(200,205,220,.85);
+  transform:translate(-50%,-50%);
+  animation:ringPulse .55s ease-out forwards;
+  pointer-events:none;
+}
+@keyframes ringPulse{
+  to{ width:260px; height:260px; opacity:0; border-width:1px; }
+}
+.shard{
+  position:fixed;
+  top:50%; left:50%;
+  width:11px; height:11px;
+  background:linear-gradient(160deg,#9aa2b8,#4b5164);
+  clip-path:polygon(50% 0%, 100% 38%, 82% 100%, 18% 100%, 0% 38%);
+  animation:shatter .7s cubic-bezier(.25,.7,.4,1) forwards;
+  pointer-events:none;
+}
+@keyframes shatter{
+  0%{ transform:translate(-50%,-50%) scale(1) rotate(0deg); opacity:1; }
+  100%{ transform:translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(.3) rotate(var(--rot)); opacity:0; }
+}
+  
 /* ---------- Result screen ---------- */
 .result-title{
   font-family:'Kaisei Decol', serif;
@@ -582,7 +610,7 @@ p.subtitle{
 
     const back = card.querySelector('.card-back');
     back.classList.add(type);
-    const label = type==='atari' ? 'アタリ' : (type==='hazure' ? 'ハズレ' : '');
+    const label = type==='atari' ? 'アタリ🎉' : (type==='hazure' ? 'ハズレ💣' : '');
     back.innerHTML = `<div class="result-word">${label}</div>`;
     const badge = document.createElement('div');
     badge.className = 'by-badge';
@@ -616,9 +644,26 @@ function showFlash(type){
       flash.appendChild(c);
       confettiEls.push(c);
     }
-  }
+  } else if(type==='hazure'){
+      const ring = document.createElement('div');
+      ring.className = 'impact-ring';
+      flash.appendChild(ring);
+      confettiEls.push(ring);
 
-  const duration = type==='blank' ? 550 : 900;
+      for(let i=0;i<14;i++){
+        const s = document.createElement('div');
+        s.className = 'shard';
+        const angle = Math.random()*Math.PI*2;
+        const dist = 80 + Math.random()*120;
+        s.style.setProperty('--dx', Math.cos(angle)*dist + 'px');
+        s.style.setProperty('--dy', Math.sin(angle)*dist + 100 + 'px');
+        s.style.setProperty('--rot', (Math.random()*360-180) + 'deg');
+        s.style.animationDelay = (Math.random()*0.08) + 's';
+        flash.appendChild(s);
+        confettiEls.push(s);
+      }
+  }
+  const duration = type==='blank' ? 1550 : 1900;
 
   // 描画が完了してからタイマーを開始する（ペイント前に消えるのを防ぐ）
   requestAnimationFrame(()=>{
