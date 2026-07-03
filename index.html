@@ -414,7 +414,7 @@ p.subtitle{
         <div class="stepper-label">アタリの数<small>0〜3個</small></div>
         <div class="stepper">
           <button id="atari-minus">−</button>
-          <div class="stepper-value" id="atari-value">1</div>
+          <div class="stepper-value" id="atari-value">0</div>
           <button id="atari-plus">＋</button>
         </div>
       </div>
@@ -582,7 +582,7 @@ p.subtitle{
 
     const back = card.querySelector('.card-back');
     back.classList.add(type);
-    const label = type==='atari' ? 'アタリ' : (type==='hazure' ? 'ハズレ' : '空');
+    const label = type==='atari' ? 'アタリ' : (type==='hazure' ? 'ハズレ' : '');
     back.innerHTML = `<div class="result-word">${label}</div>`;
     const badge = document.createElement('div');
     badge.className = 'by-badge';
