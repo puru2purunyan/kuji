@@ -54,7 +54,7 @@ body{
   position:fixed;
   width:220px; height:220px;
   border-radius:50%;
-  filter:blur(70px);
+  filter:blur(30px);
   opacity:0.35;
   pointer-events:none;
   z-index:0;
@@ -598,34 +598,40 @@ p.subtitle{
     }, 500);
   }
 
-  function showFlash(type){
-    const flash = document.getElementById('flash');
-    const text = document.getElementById('flash-text');
-    text.className = 'flash-text ' + type;
-    text.textContent = type==='atari' ? '大当たり!' : (type==='hazure' ? 'ハズレ…' : 'カラ');
-    flash.classList.add('show');
+function showFlash(type){
+  const flash = document.getElementById('flash');
+  const text = document.getElementById('flash-text');
+  text.className = 'flash-text ' + type;
+  text.textContent = type==='atari' ? '大当たり!' : (type==='hazure' ? 'ハズレ…' : 'カラ');
+  flash.classList.add('show');
 
-    let confettiEls = [];
-    if(type==='atari'){
-      for(let i=0;i<18;i++){
-        const c = document.createElement('div');
-        c.className = 'confetti';
-        c.style.left = Math.random()*100 + 'vw';
-        c.style.background = ['#ffd569','#e2472b','#fff3d0','#f2a53c'][i%4];
-        c.style.animationDuration = (0.8 + Math.random()*0.6) + 's';
-        flash.appendChild(c);
-        confettiEls.push(c);
-      }
+  let confettiEls = [];
+  if(type==='atari'){
+    for(let i=0;i<18;i++){
+      const c = document.createElement('div');
+      c.className = 'confetti';
+      c.style.left = Math.random()*100 + 'vw';
+      c.style.background = ['#ffd569','#e2472b','#fff3d0','#f2a53c'][i%4];
+      c.style.animationDuration = (0.8 + Math.random()*0.6) + 's';
+      flash.appendChild(c);
+      confettiEls.push(c);
     }
-
-    const duration = type==='blank' ? 550 : 900;
-    setTimeout(()=>{
-      flash.classList.remove('show');
-      confettiEls.forEach(c=>c.remove());
-      updateProgress();
-      afterReveal();
-    }, duration);
   }
+
+  const duration = type==='blank' ? 550 : 900;
+
+  // 描画が完了してからタイマーを開始する（ペイント前に消えるのを防ぐ）
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      setTimeout(()=>{
+        flash.classList.remove('show');
+        confettiEls.forEach(c=>c.remove());
+        updateProgress();
+        afterReveal();
+      }, duration);
+    });
+  });
+}
 
   function afterReveal(){
     game.locked = false;
